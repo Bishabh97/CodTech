@@ -1,0 +1,126 @@
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+public class ChatServer {
+    private static final int PORT = 1234;
+    private static Set<ClientHandler> clientHandlers = new HashSet<>();
+
+    public static void main(String[] args) {
+        System.out.println("Chat Server started...");
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New user connected");
+                ClientHandler clientHandler = new ClientHandler(clientSocket);
+                clientHandlers.add(clientHandler);
+                new Thread(clientHandler).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void broadcast(String message, ClientHandler sender) {
+        for (ClientHandler client : clientHandlers) {
+            if (client != sender) {
+                client.sendMessage(message);
+            }
+        }
+    }
+
+    static void removeUser(ClientHandler clientHandler) {
+        clientHandlers.remove(clientHandler);
+    }
+
+    static class ClientHandler implements Runnable {
+        private Socket socket;
+        private PrintWriter out;
+        private BufferedReader in;
+
+        public ClientHandler(Socket socket) {
+            this.socket = socket;
+        }
+
+        public void run() {
+            try {
+                out = new PrintWriter(socket.getOutputStream(), true);
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+                String message;
+                while ((message = in.readLine()) != null) {
+                    System.out.println("Received: " + message);
+                    ChatServer.broadcast(message, this);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    ChatServer.removeUser(this);
+                    socket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        void sendMessage(String message) {
+            out.println(message);
+        }
+    }
+}
+
+
+
+
+
+
+
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+public class ChatClient {
+    private static final String SERVER_IP = "localhost"; // or server IP
+    private static final int SERVER_PORT = 1234;
+
+    public static void main(String[] args) {
+        try (
+            Socket socket = new Socket(SERVER_IP, SERVER_PORT);
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            Scanner scanner = new Scanner(System.in)
+        ) {
+            System.out.print("Enter your name: ");
+            String name = scanner.nextLine();
+
+            // Send messages
+            Thread sender = new Thread(() -> {
+                while (true) {
+                    String message = scanner.nextLine();
+                    out.println(name + ": " + message);
+                }
+            });
+
+            // Receive messages
+            Thread receiver = new Thread(() -> {
+                try {
+                    String incomingMessage;
+                    while ((incomingMessage = in.readLine()) != null) {
+                        System.out.println(incomingMessage);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            sender.start();
+            receiver.start();
+
+            sender.join();
+            receiver.join();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
