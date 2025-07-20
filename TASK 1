@@ -1,0 +1,59 @@
+
+import java.io.*;
+import java.nio.file.*;
+
+public class FileHandler {
+
+    // Write content to a file
+    public static void writeToFile(String filename, String content) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
+            writer.write(content);
+            System.out.println("File written successfully.");
+        } catch (IOException e) {
+            System.out.println("Error writing to file: " + e.getMessage());
+        }
+    }
+
+    // Read content from a file
+    public static void readFromFile(String filename) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            System.out.println("File content:");
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+        }
+    }
+
+    // Modify a file by replacing text
+    public static void modifyFile(String filename, String oldText, String newText) {
+        try {
+            Path path = Paths.get(filename);
+            String content = Files.readString(path);
+            content = content.replace(oldText, newText);
+            Files.writeString(path, content);
+            System.out.println("File modified successfully.");
+        } catch (IOException e) {
+            System.out.println("Error modifying file: " + e.getMessage());
+        }
+    }
+
+    // Main method to test
+    public static void main(String[] args) {
+        String filename = "sample.txt";
+
+        // Write
+        writeToFile(filename, "Hello, this is a test file.\nWe will modify this line.");
+
+        // Read
+        readFromFile(filename);
+
+        // Modify
+        modifyFile(filename, "test", "updated");
+
+        // Read again to see changes
+        readFromFile(filename);
+    }
+}
